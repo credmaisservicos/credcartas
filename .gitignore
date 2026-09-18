@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.reference-ousmane/
+.reference-ousmane-tar/
+vite-*.log
