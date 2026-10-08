@@ -113,3 +113,15 @@ img[src$="/56.png"],img[src$="/63.png"]{object-position:center 12%!important}
 }
 
 @media (max-height:700px) and (min-width:700px){.hero-copy,.page-hero-copy{padding-top:60px;padding-bottom:45px}.hero h1,.page-hero h1{font-size:clamp(54px,6.6vw,84px)}.hero-facts{margin-top:34px}}
+
+/* Official CredMais artwork retained verbatim; descriptor is accessible native text. */
+.brand{display:block;flex:none;width:250px;max-width:100%;line-height:1;letter-spacing:normal}
+.brand-lockup{display:block;position:relative;aspect-ratio:735/167;container-type:inline-size}
+.brand-art{display:block;width:100%;height:auto;clip-path:inset(0 0 17% 0)}
+.brand-descriptor{position:absolute;left:26%;right:0;bottom:3.6%;height:12%;display:flex;align-items:center;justify-content:space-between;gap:8px;color:#686b75}
+.brand-descriptor>span{font:800 2.45cqw Manrope,Arial,sans-serif;letter-spacing:.52em;white-space:nowrap;line-height:1.2}
+.brand-descriptor>i{display:block;flex:1;height:1px;background:linear-gradient(90deg,#B8832A,#F3D27A,#D7A443)}
+.site-footer .brand{width:300px;margin-bottom:20px}
+@media(min-width:901px) and (max-width:1180px){.site-header .brand{width:210px}}
+@media(max-width:600px){.site-header .brand{width:210px}.site-footer .brand{width:min(300px,100%)}}
+@media(max-width:370px){.site-header .brand{width:195px}}
