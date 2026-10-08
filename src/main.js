@@ -2,6 +2,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { animate, inView } from 'motion';
 import './style.css';
+import './mobile.css';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -58,21 +59,70 @@ const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matc
 
 const menuButton = document.querySelector('.menu-button');
 const mobileNav = document.querySelector('.mobile-nav');
-menuButton?.addEventListener('click', () => {
-  const open = mobileNav?.classList.toggle('open');
+let menuScroll = 0;
+let menuPreviousFocus;
+const touchLayout = window.matchMedia('(max-width: 900px)');
+const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+
+if (menuButton) {
+  menuButton.innerHTML = '<span class="menu-button-label">Menu</span><span class="menu-button-icon" aria-hidden="true"><i></i><i></i></span>';
+  menuButton.setAttribute('aria-label', 'Abrir menu de navegação');
+}
+if (mobileNav) {
+  mobileNav.hidden = true;
+  mobileNav.setAttribute('aria-label', 'Navegação no celular');
+  const normalize = path => path.replace(/\/index\.html$/, '/').replace(/\.html$/, '').replace(/\/$/, '') || '/';
+  mobileNav.querySelectorAll(':scope > a').forEach(link => {
+    if (normalize(new URL(link.href).pathname) === normalize(location.pathname)) link.setAttribute('aria-current', 'page');
+  });
+}
+
+function setMenu(open, restoreFocus = true) {
+  if (!mobileNav || !menuButton || open === mobileNav.classList.contains('open')) return;
+  if (open) {
+    menuScroll = window.scrollY;
+    menuPreviousFocus = document.activeElement;
+    document.body.style.position = 'fixed';
+    document.body.style.top = '-' + menuScroll + 'px';
+    document.body.style.width = '100%';
+    mobileNav.hidden = false;
+  }
+  mobileNav.classList.toggle('open', open);
   document.body.classList.toggle('menu-open', open);
-  menuButton.setAttribute('aria-expanded', String(Boolean(open)));
-  menuButton.textContent = open ? 'Fechar' : 'Menu';
+  menuButton.setAttribute('aria-expanded', String(open));
+  menuButton.setAttribute('aria-label', open ? 'Fechar menu de navegação' : 'Abrir menu de navegação');
+  menuButton.querySelector('.menu-button-label').textContent = open ? 'Fechar' : 'Menu';
+  document.querySelectorAll('main, .site-footer, .whatsapp-float').forEach(element => { element.inert = open; });
+  if (open) {
+    mobileNav.scrollTop = 0;
+    mobileNav.querySelector('a')?.focus({ preventScroll: true });
+  } else {
+    mobileNav.hidden = true;
+    document.body.style.removeProperty('position');
+    document.body.style.removeProperty('top');
+    document.body.style.removeProperty('width');
+    window.scrollTo({ top: menuScroll, behavior: 'instant' });
+    if (restoreFocus) (menuPreviousFocus || menuButton).focus({ preventScroll: true });
+  }
+}
+menuButton?.addEventListener('click', () => setMenu(!mobileNav?.classList.contains('open')));
+mobileNav?.addEventListener('click', event => {
+  if (event.target.closest('a')) setMenu(false);
 });
-mobileNav?.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => {
-  mobileNav.classList.remove('open');
-  document.body.classList.remove('menu-open');
-  if (menuButton) menuButton.textContent = 'Menu';
-}));
+document.addEventListener('keydown', event => {
+  if (!mobileNav?.classList.contains('open')) return;
+  if (event.key === 'Escape') { event.preventDefault(); setMenu(false); }
+  if (event.key !== 'Tab') return;
+  const controls = [menuButton, ...mobileNav.querySelectorAll('a[href], button, [tabindex="0"]')].filter(element => element && element.getClientRects().length);
+  const first = controls[0], last = controls[controls.length - 1];
+  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+});
+touchLayout.addEventListener('change', event => { if (!event.matches) setMenu(false, false); });
 
 document.querySelectorAll('.magnetic').forEach((element) => {
   element.addEventListener('pointermove', (event) => {
-    if (reducedMotion) return;
+    if (reducedMotion || !finePointer.matches || event.pointerType === 'touch') return;
     const rect = element.getBoundingClientRect();
     gsap.to(element, { x: (event.clientX - rect.left - rect.width / 2) * .08, y: (event.clientY - rect.top - rect.height / 2) * .08, duration: .25, ease: 'power3.out' });
   });
@@ -100,19 +150,19 @@ if (!reducedMotion) {
     onEnter: (elements) => gsap.fromTo(elements, { y: 48, opacity: 0 }, { y: 0, opacity: 1, duration: .75, stagger: .1, ease: 'power3.out' })
   });
 
-  gsap.utils.toArray('[data-parallax]').forEach((frame) => {
-    const image = frame.querySelector('img');
-    if (!image) return;
-    gsap.fromTo(image, { yPercent: -5, scale: 1.06 }, { yPercent: 5, scale: 1.12, ease: 'none', scrollTrigger: { trigger: frame, start: 'top bottom', end: 'bottom top', scrub: true } });
-  });
-
-  const marquee = document.querySelector('.brand-strip-track');
-  if (marquee) gsap.to(marquee, { xPercent: -50, duration: 18, repeat: -1, ease: 'none' });
-  document.querySelectorAll('.ticker-track').forEach((track) => gsap.to(track, { xPercent: -50, duration: 22, repeat: -1, ease: 'none' }));
-
-  const processTrack = document.querySelector('.process-track');
-  if (processTrack) ScrollTrigger.matchMedia({
-    '(min-width: 901px)': () => gsap.to(processTrack, { x: () => -(processTrack.scrollWidth - window.innerWidth + window.innerWidth * .14), ease: 'none', scrollTrigger: { trigger: '.process', start: 'top top', end: () => `+=${processTrack.scrollWidth * .8}`, pin: true, scrub: 1, invalidateOnRefresh: true, anticipatePin: 1 } })
+  // Photo movement and pinned journeys belong to the spacious desktop layout.
+  // MatchMedia removes their inline transforms when the viewport becomes mobile.
+  gsap.matchMedia().add('(min-width: 901px) and (hover: hover) and (pointer: fine)', () => {
+    gsap.utils.toArray('[data-parallax]').forEach(frame => {
+      const image = frame.querySelector('img');
+      if (!image) return;
+      gsap.fromTo(image, { yPercent: -5, scale: 1.06 }, { yPercent: 5, scale: 1.12, ease: 'none', scrollTrigger: { trigger: frame, start: 'top bottom', end: 'bottom top', scrub: true } });
+    });
+    const marquee = document.querySelector('.brand-strip-track');
+    if (marquee) gsap.to(marquee, { xPercent: -50, duration: 18, repeat: -1, ease: 'none' });
+    document.querySelectorAll('.ticker-track').forEach(track => gsap.to(track, { xPercent: -50, duration: 22, repeat: -1, ease: 'none' }));
+    const processTrack = document.querySelector('.process-track');
+    if (processTrack) gsap.to(processTrack, { x: () => -Math.max(0, processTrack.scrollWidth - window.innerWidth + window.innerWidth * .14), ease: 'none', scrollTrigger: { trigger: '.process', start: 'top top', end: () => '+=' + processTrack.scrollWidth * .8, pin: true, scrub: 1, invalidateOnRefresh: true, anticipatePin: 1 } });
   });
 
   gsap.to('.progress', { scaleX: 1, ease: 'none', scrollTrigger: { trigger: document.body, start: 'top top', end: 'bottom bottom', scrub: .25 } });
@@ -140,17 +190,13 @@ document.querySelectorAll('.footer-brand').forEach((brand) => {
   if (!brand.querySelector('.official-location')) brand.insertAdjacentHTML('beforeend', '<span class="official-location">São Paulo — Brasil</span>');
 });
 
+if (mobileNav) {
+  mobileNav.insertAdjacentHTML('beforeend', '<div class="mobile-nav-contact"><p>Vamos conversar sobre o seu plano.</p><a class="mobile-contact-action" href="'+officialContact.whatsapp+'" target="_blank" rel="noopener">Falar pelo WhatsApp <span aria-hidden="true">↗</span></a><a class="mobile-contact-email" href="mailto:'+officialContact.email+'">'+officialContact.email+'</a></div>');
+}
+
 const contactNotes = document.querySelector('.contact-notes');
 if (contactNotes) contactNotes.insertAdjacentHTML('beforeend', `<span>${officialContact.phoneDisplay}</span><span>${officialContact.email}</span><span>São Paulo — Brasil</span>`);
 
-document.body.insertAdjacentHTML('beforeend', `<a class="whatsapp-float magnetic" href="${officialContact.whatsapp}" target="_blank" rel="noopener" aria-label="Falar com a CredCartas pelo WhatsApp">WhatsApp</a>`);
+document.body.insertAdjacentHTML('beforeend', `<a class="whatsapp-float magnetic" href="${officialContact.whatsapp}" target="_blank" rel="noopener" aria-label="Falar com a CredCartas pelo WhatsApp"><svg class="whatsapp-float-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20.5 11.7a8.5 8.5 0 0 1-12.8 7.4L3 20.5l1.4-4.6a8.5 8.5 0 1 1 16.1-4.2Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.1 7.5c.3-.2.7-.2.8.2l.8 1.7c.2.4-.3.8-.7 1.2.5 1.3 1.6 2.4 3 3 .3-.4.8-1 1.1-.8l1.8.9c.4.2.4.6.2.9-.5.9-1.2 1.3-2.1 1.1-2.8-.6-5.7-3.2-6.3-6-.2-.8.4-1.8 1.4-2.2Z" fill="currentColor"/></svg><span>WhatsApp</span></a>`);
 
 window.addEventListener('load', () => ScrollTrigger.refresh());
-window.addEventListener('resize', () => {
-  if (window.innerWidth > 900) {
-    mobileNav?.classList.remove('open');
-    document.body.classList.remove('menu-open');
-    menuButton?.setAttribute('aria-expanded', 'false');
-    if (menuButton) menuButton.textContent = 'Menu';
-  }
-});
