@@ -118,14 +118,6 @@ if (!reducedMotion) {
   gsap.to('.progress', { scaleX: 1, ease: 'none', scrollTrigger: { trigger: document.body, start: 'top top', end: 'bottom bottom', scrub: .25 } });
 }
 
-document.querySelector('.contact-form')?.addEventListener('submit', (event) => {
-  event.preventDefault();
-  const data = new FormData(event.currentTarget);
-  const subject = encodeURIComponent('Quero encontrar uma carta contemplada');
-  const body = encodeURIComponent(`Nome: ${data.get('name')}\nWhatsApp: ${data.get('phone')}\nObjetivo: ${data.get('goal')}\nMensagem: ${data.get('message') || ''}`);
-  window.location.href = `mailto:contato@sejacredmais.com?subject=${subject}&body=${body}`;
-});
-
 const officialContact = {
   phoneDisplay: '(11) 94089-3852',
   phoneHref: 'tel:+5511940893852',
