@@ -1,4 +1,5 @@
 User-agent: *
-Allow: /
+Disallow: /admin/
+Disallow: /login
 
-Sitemap: https://credcartas.solutions/sitemap.xml
+Sitemap: https://cartas.sejacredmais.com/sitemap.xml
